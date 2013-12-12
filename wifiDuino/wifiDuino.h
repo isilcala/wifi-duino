@@ -20,42 +20,66 @@
 #include "Arduino.h"
 
 
-static class wifiDuino
+class wifiDuinoClass
 {
   public:
+    //Debug flag
     static uint8_t DEBUG;
+
+    //WiFi-Duino mode
     static uint8_t MODE;
+
+    //Adapter configuration   
     static uint8_t DHCP;
     static char ip[16]; 
     static char netmask[16]; 
     static char gateway[16]; 
+    static char dns[32]; 
+    static char clientPort[6]; 
+
+    //Remote target configuration
     static char remoteDomain[30]; 
-    static char remotePort[5]; 
-    static char localPort[5]; 
-    static char uartConfig[15];
+    static char remotePort[6]; 
+
+    //Environment WiFi OR AP WiFi configuration
+
+    /*wifi SSID*/
     static char wifiSSID[32];
+
+    /*
+    wifi encrypt options:
+    none:         Open network 
+    wep_open:     wep encryption，open authentication method 
+    wep:          wep encryption，encryption authentication 
+    wpa_tkip:     wpa tkip 
+    wpa_aes:      wpa aes 
+    wpa2_tkip:    wpa2 tkip 
+    wpa2_aes:     wpa2 aes 
+    wpawpa2_tkip: wpa/wpa2 tkip 
+    wpawpa2_aes:  wpa/wpa2 aes 
+    auto:         auto select(default)
+    */
     static char wifiEncrypt[15];
+
+    /*wifi password*/
     static char wifiPassword[32];
-    
+
+    //Starting WiFi-Duino
     static void begin();
+
+    //Check if WiFi-Duino is started up
+    static bool checkState();
+
+    //Get MAC address of WiFi-Duino 
+    static void getMAC(char* MAC);  
+
     static void enterATMode();
     static void enterSerialMode();
-    static void writeAPMode();
-    static void writeCardMode();
-    static void writeDHCP();    
-    static void writeWifiConfig();   
-    static void writeClientMode();
-    static void writeServerMode();
-    static void writeLocalIP();
-    static void writeLocalPort();
-    static void writeRemoteDomain();
-    static void writeRemotePort();
-    static void writeUartConfig();    
-    static void commit();    
-    static void waitACK();    
+    static bool waitACK(uint8_t);    
     
-    static void getMAC(char* MAC);  
     
-}wifiDuino;
+};
+
+extern wifiDuinoClass wifiDuino;
 
 #endif
