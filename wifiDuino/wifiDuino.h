@@ -23,8 +23,11 @@
 class wifiDuinoClass
 {
   public:
+    //Package buffe
+    static char requestbuffer[128]; 
+    static char respondbuffer[1024]; 
     //Debug flag
-    static uint8_t DEBUG;
+    static bool DEBUG;
 
     //WiFi-Duino mode
     static uint8_t MODE;
@@ -36,6 +39,9 @@ class wifiDuinoClass
     static char gateway[16]; 
     static char dns[32]; 
     static char clientPort[6]; 
+
+    //AP server configuration
+    static char listenPort[6]; 
 
     //Remote target configuration
     static char remoteDomain[30]; 
@@ -70,12 +76,19 @@ class wifiDuinoClass
     //Check if WiFi-Duino is started up
     static bool checkState();
 
+    //HTTP
+    static bool request(uint8_t timeout); 
+    static void phaseGetRequest();
+    static void respond(); 
+    static void respondMessage(char *message);
+    
     //Get MAC address of WiFi-Duino 
     static void getMAC(char* MAC);  
-
+   
+    static void resetSerial();   
     static void enterATMode();
     static void enterSerialMode();
-    static bool waitACK(uint8_t);    
+    static bool waitACK(uint8_t); 
     
     
 };
