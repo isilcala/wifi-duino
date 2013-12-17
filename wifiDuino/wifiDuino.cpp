@@ -151,13 +151,16 @@ void wifiDuinoClass::enterATMode(){
   delay(100);
 }   
    
-/*Enter AT Command Mode*/
+/*Enter Serial Mode*/
 void wifiDuinoClass::enterSerialMode(){
-  pinMode(EXIT_SERIAL_PIN,OUTPUT);  
-  digitalWrite(EXIT_SERIAL_PIN,HIGH);
-  delay(300);
-  digitalWrite(EXIT_SERIAL_PIN,LOW);
-  delay(100);
+  resetSerial();
+  Serial1.println("at+reconn=1");
+}  
+
+/*Enter Serial Mode*/
+void wifiDuinoClass::commitSerialMode(){
+  resetSerial();
+  Serial1.println("at+save=1");
 }  
 
 /*wait for acknowledge*/

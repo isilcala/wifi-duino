@@ -88,6 +88,7 @@ class wifiDuinoClass
     static void resetSerial();   
     static void enterATMode();
     static void enterSerialMode();
+    static void commitSerialMode();
     static bool waitACK(uint8_t); 
     
     
