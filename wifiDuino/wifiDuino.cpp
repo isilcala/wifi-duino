@@ -1,27 +1,37 @@
 #include "wifiDuino.h"
 
-bool wifiDuinoClass::DEBUG = false;
 uint8_t wifiDuinoClass::MODE = WIFI_MODE_AP_SERVER;
 uint8_t wifiDuinoClass::DHCP = 0;
 char wifiDuinoClass::requestbuffer[128] = ""; 
 char wifiDuinoClass::respondbuffer[1024] = ""; 
-char wifiDuinoClass::ip[16] = "192.168.0.1"; 
+char wifiDuinoClass::commandbuffer[32] = ""; 
+char wifiDuinoClass::ip[16] = "192.168.1.1"; 
 char wifiDuinoClass::netmask[16] = "255.255.255.0"; 
-char wifiDuinoClass::gateway[16] = "192.168.0.1"; 
-char wifiDuinoClass::dns[32] = "192.168.0.1,0,0,0,0"; 
-char wifiDuinoClass::remoteDomain[30] ="www.baidu.com"; 
+char wifiDuinoClass::gateway[16] = "192.168.1.1"; 
+char wifiDuinoClass::dns[32] = "192.168.1.1,8.8.8.8"; 
+char wifiDuinoClass::remoteDomain[32] ="www.baidu.com"; 
 char wifiDuinoClass::remotePort[6] = "8080";
 char wifiDuinoClass::clientPort[6] = "3136";
 char wifiDuinoClass::listenPort[6] = "5432";
 char wifiDuinoClass::wifiSSID[32] = "";
-char wifiDuinoClass::wifiEncrypt[15] = "auto";
+char wifiDuinoClass::wifiEncrypt[16] = "auto";
 char wifiDuinoClass::wifiPassword[32] = "";
 
+
+/*reset Serial1*/
 void wifiDuinoClass::begin(){
-    if(DEBUG){
-        Serial.println("Starting wifiDuino!");
+    if(Serial1){
+        Serial1.flush();
+        delay(2);
+        Serial1.end();
     }
-    resetSerial();
+    Serial1.begin(115200);
+}
+
+void wifiDuinoClass::commit(){
+    if(WIFI_DUINO_DEBUG){
+        Serial.println("Commit Net Configuration!");
+    }
     enterATMode();
 
     if(MODE == WIFI_MODE_AP_SERVER){
@@ -31,7 +41,7 @@ void wifiDuinoClass::begin(){
         //Setting DHCP configuration
         Serial1.println("at+dhcpd=1");
         Serial1.println("at+dhcpd_ip=192.168.1.1,192.168.1.254,255.255.255.0,192.168.1.254");
-        Serial1.println("at+dhcpd_dns=192.168.1.254,0.0.0.0");
+        Serial1.println("at+dhcpd_dns=192.168.1.254,8.8.8.8");
         Serial1.println("at+dhcpd_time=86400");
 
         //Setting AP WiFi configuration
@@ -128,12 +138,53 @@ void wifiDuinoClass::begin(){
     //commit configuration and reconn
     Serial1.println("at+net_commit=1");
     Serial1.println("at+reconn=1");  
-  
 }
 
-/*Check WiFi Connection State*/
+void wifiDuinoClass::commitQuick(){
+    if(WIFI_DUINO_DEBUG){
+  
+        Serial.println("Commit Mode Configuration!");
+    }
+    enterATMode();
+    
+    if(MODE == WIFI_MODE_AP_SERVER){
+        //Setting AP server configuration
+        Serial1.println("at+net_ip=192.168.1.254,255.255.255.0,192.168.1.254");
+        Serial1.println("at+net_dns=192.168.1.254,0.0.0.0");
+        Serial1.print("at+remoteport=");
+        Serial1.println(listenPort);
+        Serial1.println("at+remotepro=tcp");
+        Serial1.println("at+timeout=0"); 
+
+    }
+    else if(MODE == WIFI_MODE_ADAPTER_SERVER){
+         //Setting adapter server configuration
+        Serial1.print("at+CLport=");
+        Serial1.println(clientPort);
+        Serial1.println("at+remotepro=tcp");
+        Serial1.println("at+timeout=0");
+        Serial1.println("at+mode=server");
+
+    }else if(MODE == WIFI_MODE_ADAPTER_CLIENT){
+        //Setting remote target configuration
+        Serial1.print("at+remoteip=");
+        Serial1.println(remoteDomain);
+        Serial1.print("at+remoteport=");
+        Serial1.println(remotePort);
+
+        //Setting adapter client configuration
+        Serial1.println("at+remotepro=tcp");
+        Serial1.println("at+mode=client");
+    }
+    //commit configuration and reconn
+    Serial1.println("at+save=1");
+
+}
+/*Check WiFi-Duino State*/
 bool wifiDuinoClass::checkState(){
-    resetSerial();
+    if(WIFI_DUINO_DEBUG){
+        Serial.println("Check WiFi-Duino State...");
+    }
     enterATMode();
     Serial1.println("at+ver=?");
     if ( waitACK(100) ){
@@ -151,53 +202,39 @@ void wifiDuinoClass::enterATMode(){
   delay(100);
 }   
    
-/*Enter AT Command Mode*/
-void wifiDuinoClass::enterSerialMode(){
-  pinMode(EXIT_SERIAL_PIN,OUTPUT);  
-  digitalWrite(EXIT_SERIAL_PIN,HIGH);
-  delay(300);
-  digitalWrite(EXIT_SERIAL_PIN,LOW);
-  delay(100);
-}  
-
-/*wait for acknowledge*/
+/*Wait for acknowledge*/
 bool wifiDuinoClass::waitACK(uint8_t timeout){
     bool ACK = false;
+    int8_t commandIndex = 0;
     for(uint8_t i=0;i<timeout;i++){
-        if(Serial1.available()){
+        if(Serial1.available()){            
+            i--;
             ACK = true;
             char inChar = (char)Serial1.read(); 
-            Serial.print(inChar);
-            i--;
+            commandbuffer[commandIndex] = inChar;
+            commandIndex++;
+            if(WIFI_DUINO_DEBUG){  
+                Serial.print(inChar);
+            }
         }else{
             delay(1);
         }
     }
     return ACK;
-}   
-
-/*reset Serial1*/
-void wifiDuinoClass::resetSerial(){
-    if(Serial1){
-        Serial1.flush();
-        delay(2);
-        Serial1.end();
-    }
-    Serial1.begin(115200);
-}
+}  
 
 /*wait for request*/
-bool wifiDuinoClass::request(uint8_t timeout){ 
+bool wifiDuinoClass::getRequest(uint8_t timeout){ 
     int8_t requestIndex = 0;
 
-    if(DEBUG)
+    if(WIFI_DUINO_DEBUG)
         Serial.println("Waiting for requests...");
-    resetSerial();
     for(uint8_t i=0;i<timeout;){
         if(Serial1.available()){
             requestbuffer[requestIndex] = (char)Serial1.read(); 
             if(requestbuffer[requestIndex] == '\n'){
                 if( requestIndex > 2 && requestbuffer[0]=='G' && requestbuffer[1]=='E' && requestbuffer[2]=='T' )
+                    phaseGetRequest();
                     return true;
 
                 requestIndex = -1;
@@ -231,7 +268,7 @@ void wifiDuinoClass::phaseGetRequest(){
 }
 
 /*send respond*/
-void wifiDuinoClass::respond(){
+void wifiDuinoClass::sendRespond(){
     Serial1.print("HTTP/1.1 200 OK\r\n");
     Serial1.print("Content-Type: text/html\r\n");
     Serial1.print("Content-Length: ");
@@ -242,7 +279,7 @@ void wifiDuinoClass::respond(){
 }
 
 /*send short respond message*/
-void wifiDuinoClass::respondMessage(char *message){
+void wifiDuinoClass::sendRespondMessage(char *message){
     Serial1.print("HTTP/1.1 200 OK\r\n");
     Serial1.print("Content-Type: text/plain\r\n");
     Serial1.print("Content-Length: ");
