@@ -7,14 +7,9 @@
 #include <wifiDuino.h>
 
 // Pin 13 has an LED connected on most Arduino boards.
-// give it a name:
 #define led 13
 
-char wifiSSID[18] = "WiFi-Duino";
-char wifiEncrypt[12] = "wpawpa2_aes";
-char wifiPassword[11] = "helloled";
-char listenPort[5] = "8081";
-
+// storage web page in flash
 char webPage[] PROGMEM =
 "<html>"
   "<head><title>"
@@ -27,52 +22,34 @@ char webPage[] PROGMEM =
 "</html>" 
 ;
 
-// the setup routine runs once when you press reset:
 void setup() {                
   // initialize the digital pin as an output.  
   pinMode(led, OUTPUT);  
- 
   Serial.begin(9600);
-  // while the serial stream is not open, do nothing:
-   while (!Serial) ;
-   
-  //Check if WiFi-Duino ready
-  while( !wifiDuino.checkState() ) delay(2000);
-      Serial.println("WiFi Duino Found");
-  delay(1000);
   
-  wifiDuino.MODE = WIFI_MODE_AP_SERVER;
-  strcpy(wifiDuino.wifiSSID, wifiSSID);
-    strcpy(wifiDuino.wifiEncrypt, wifiEncrypt);
-      strcpy(wifiDuino.wifiPassword, wifiPassword);
-        strcpy(wifiDuino.listenPort, listenPort);
-  
-
-  strcpy_P(wifiDuino.respondbuffer, webPage);
   wifiDuino.begin();
-  
-  for(int i = 0; i<100 ; i++)
-    wifiDuino.waitACK(255);
+  wifiDuino.setMode(WIFI_MODE_ADAPTER);
+  wifiDuino.setWiFiConfig("cfw","auto","zbh26513897");
+  wifiDuino.setDHCP(DHCP_DISABLE);
+  wifiDuino.setIpConfig("192.168.1.254","255.255.255.0","192.168.1.1");
+  wifiDuino.setDnsConfig("192.168.1.254","8.8.8.8");
+  wifiDuino.writeConfig();
+  wifiDuino.startServer("8081");
 }
 
 // the loop routine runs over and over again forever:
 void loop() {
- if(wifiDuino.request(255)){
-     wifiDuino.phaseGetRequest();
-     Serial.println(wifiDuino.requestbuffer);
-     if( strcmp(wifiDuino.requestbuffer,"/ledon") == 0 ){
-       digitalWrite(led,HIGH);
-       wifiDuino.respondMessage("OK"); 
+  char request[32]="";
+  if(wifiDuino.waitHttpRequest(request,32,1000)){
+     if( !strcmp(request,"/ledon") ){
+       digitalWrite(led, HIGH);
      }
-     else if( strcmp(wifiDuino.requestbuffer,"/ledoff") == 0 ){
-       digitalWrite(led,LOW);
-       wifiDuino.respondMessage("OK"); 
+     if( !strcmp(request,"/ledoff") ){
+       digitalWrite(led, LOW);
      }
-     else if( strcmp(wifiDuino.requestbuffer,"/") == 0 ){
-       Serial.println("Web page served.");
-       wifiDuino.respond(); 
-     }
- }
+     wifiDuino.sendHttpPage(webPage);
+  }
 }
+
 
 
