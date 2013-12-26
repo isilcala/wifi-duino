@@ -59,6 +59,7 @@ class wifiDuinoClass
     */
     static void setWiFiConfig(char* SSID, char* encrypt, char* password);
     
+<<<<<<< HEAD
     /*Set DHCP configurations(in adapter mode), available options are:
         DHCP_ENABLE: WiFi-Duino will automatic get ip and dns configurations from router. Check if your router enable DHCP function.
         DHCP_DISABLE: Manually set ip and dns configurations, Check your network for available configurations.
@@ -73,6 +74,16 @@ class wifiDuinoClass
     
     //Commit all net configurations if needed(takes about 20s~30s), do nothing if no changes found.  
     static void writeConfig();    
+=======
+    //Get MAC address of WiFi-Duino 
+    static void getMAC(char* MAC);  
+   
+    static void resetSerial();   
+    static void enterATMode();
+    static void enterSerialMode();
+    static void commitSerialMode();
+    static bool waitACK(uint8_t); 
+>>>>>>> 35a39c0d3113c562b8f1d269fece69ede93cd4ec
     
     //Start server  
     static void startServer(char *port);

@@ -143,6 +143,7 @@ void wifiDuinoClass::setDnsConfig(char* dns1, char* dns2){
     }else  error();     
 }
 
+<<<<<<< HEAD
 void wifiDuinoClass::writeConfig(){
     char ACK[64]="";
     char dhcpdCommand[] = "at+dhcpd=";
@@ -151,6 +152,28 @@ void wifiDuinoClass::writeConfig(){
     char dhcpdIpConfig[] = "192.168.1.1,192.168.1.253,255.255.255.0,192.168.1.254";
     char dhcpdDnsCommand[] = "at+dhcpd_dns=";
     char dhcpdDnsConfig[] = "192.168.1.254,8.8.8.8";
+=======
+/*Enter AT Command Mode*/
+void wifiDuinoClass::enterATMode(){
+  pinMode(EXIT_SERIAL_PIN,OUTPUT);  
+  digitalWrite(EXIT_SERIAL_PIN,HIGH);
+  delay(300);
+  digitalWrite(EXIT_SERIAL_PIN,LOW);
+  delay(100);
+}   
+   
+/*Enter Serial Mode*/
+void wifiDuinoClass::enterSerialMode(){
+  resetSerial();
+  Serial1.println("at+reconn=1");
+}  
+
+/*Enter Serial Mode*/
+void wifiDuinoClass::commitSerialMode(){
+  resetSerial();
+  Serial1.println("at+save=1");
+}  
+>>>>>>> 35a39c0d3113c562b8f1d269fece69ede93cd4ec
 
     Serial1.print("at+netmode=");
     Serial1.println("?");
