@@ -1,3 +1,11 @@
+/*
+  wifiDuino.h - Library for Wifi-Duino.
+  Wifi-Duino is a custmized arduino-compatible prototyping platform, providing wifi conectivity.
+  please visiting XXXXXXXXXXXXXXXXXXXXXXXX
+  Created by Winterland.
+  VER1.1, 25 DEC 2013.
+  Released under GPLv2.
+*/
 #include "wifiDuino.h"
 
 bool wifiDuinoClass::commitFlag = false; 
@@ -14,21 +22,26 @@ void wifiDuinoClass::begin(){
     }    
     Serial1.begin(115200);
     
-    for(int i=0;i<30;i++){  
-        delay(1600);
-        digitalWrite(EXIT_SERIAL_PIN,HIGH);
-        delay(200);
-        digitalWrite(EXIT_SERIAL_PIN,LOW); 
-        delay(200);
-        Serial1.println("at+ver=?");
-        if ( waitACK(ACK,100)){
-            break;
-        }else if(i==29) error();
-    }
+    digitalWrite(EXIT_SERIAL_PIN,HIGH);
+    delay(200);
+    digitalWrite(EXIT_SERIAL_PIN,LOW); 
+    delay(100);
+    Serial1.println("at+ver=?");
+    if ( waitACK(ACK,100)){
+        return;
+    }else  delay(30000);
+    
+    digitalWrite(EXIT_SERIAL_PIN,HIGH);
+    delay(200);
+    digitalWrite(EXIT_SERIAL_PIN,LOW); 
+    delay(100);
+    Serial1.println("at+ver=?");
+    if ( !waitACK(ACK,100) ) error();
+    
 }
 
 void wifiDuinoClass::setMode(char mode){
-    char ACK[16]="";
+    char ACK[24]="";
     char netModeCommand[] = "at+netmode=";
     Serial1.print(netModeCommand);
     Serial1.println("?");
@@ -70,7 +83,7 @@ void wifiDuinoClass::setWiFiConfig(char* SSID, char* encrypt, char* password){
 }
 
 void wifiDuinoClass::setDHCP(char dhcp){
-    char ACK[16]="";
+    char ACK[24]="";
     char dhcpCommand[] = "at+dhcpc=";
     Serial1.print(dhcpCommand);
     Serial1.println("?");
@@ -139,21 +152,20 @@ void wifiDuinoClass::writeConfig(){
     char dhcpdCommand[] = "at+dhcpd=";
     char dhcpdConfig[] = "1";
     char dhcpdIpCommand[] = "at+dhcpd_ip=";
-    char dhcpdIpConfig[] = "192.168.1.1,192.168.1.253,255.255.255.0,192.168.1.254";
+    char dhcpdIpConfig[] = "192.168.1.1,192.168.1.254,255.255.255.0,192.168.1.254";
     char dhcpdDnsCommand[] = "at+dhcpd_dns=";
     char dhcpdDnsConfig[] = "192.168.1.254,8.8.8.8";
 
     Serial1.print("at+netmode=");
     Serial1.println("?");
-    if ( waitACK(ACK,100)) ;        
-    else  error();
+    if ( !waitACK(ACK,100))  error();
 
     if(ACK[0] == WIFI_MODE_AP){
     
         Serial1.print(dhcpdCommand);
         Serial1.println("?");
         if ( waitACK(ACK,100)){
-            if ( strcmp(dhcpdConfig,ACK) ){
+            if ( strcmp(dhcpdConfig,ACK) !=0 ){
                 commitFlag = true;
                 Serial1.print(dhcpdCommand);
                 Serial1.println(dhcpdConfig);
@@ -164,7 +176,7 @@ void wifiDuinoClass::writeConfig(){
         Serial1.print(dhcpdIpCommand);
         Serial1.println("?");
         if ( waitACK(ACK,100)){
-            if ( strcmp(dhcpdIpConfig,ACK) ){
+            if ( strcmp(dhcpdIpConfig,ACK) !=0 ){
                 commitFlag = true;
                 Serial1.print(dhcpdIpCommand);
                 Serial1.println(dhcpdIpConfig);
@@ -188,34 +200,35 @@ void wifiDuinoClass::writeConfig(){
 
     }
     if(commitFlag){
-        commitFlag = false;
         //commit configuration and reconnect
         Serial1.println("at+net_commit=1");
-        delay(2000);
-        if ( !waitACK(ACK,100))  error();        
-    }
-    for(int i=0;i<30;i++){  
+        for(uint8_t i=0;i<100;i++){  
+            delay(2000);
+            if ( waitACK(ACK,255) ){                
+                commitFlag = false;
+                break;          
+            }    
+            if( i==99 )  error();
+        }        
+                
+        delay(30000);
         Serial1.println("at+ver=?");
-        if ( waitACK(ACK,100)){
-            break;
-        }else if(i==29) error();
-    }
-
+        if ( !waitACK(ACK,255) ) error();
+    } 
 }
 
 void wifiDuinoClass::startServer(char *port){
-    char ACK[16];
-    delay(600);
+    char ACK[24]="";
+    delay(450);
     digitalWrite(EXIT_SERIAL_PIN,HIGH);
     delay(150);
     digitalWrite(EXIT_SERIAL_PIN,LOW); 
     
-
     Serial1.print("at+remoteport=");
     Serial1.println(port);
-    if( !waitACK(ACK,100) ) error();    
+    if( !waitACK(ACK,100) ) error(); 
     Serial1.println("at+remotepro=tcp");
-    if( !waitACK(ACK,100) ) error();   
+    if( !waitACK(ACK,100) ) error(); 
     Serial1.println("at+timeout=0");
     if( !waitACK(ACK,100) ) error();   
     Serial1.println("at+mode=server");
@@ -226,8 +239,8 @@ void wifiDuinoClass::startServer(char *port){
 }
 
 void wifiDuinoClass::startClient(char *remoteDomain, char *remotePort){
-    char ACK[16];
-    delay(600);
+    char ACK[24];
+    delay(450);
     digitalWrite(EXIT_SERIAL_PIN,HIGH);
     delay(150);
     digitalWrite(EXIT_SERIAL_PIN,LOW); 
@@ -245,21 +258,23 @@ void wifiDuinoClass::startClient(char *remoteDomain, char *remotePort){
     Serial1.println("at+save=1");
     if( !waitACK(ACK,100) ) error();
 }
-
-/*wait for request*/
+//wait for request
 bool wifiDuinoClass::waitHttpRequest(char* request, uint8_t len, uint16_t timeout){ 
     uint8_t requestIndex = 0;
-
+    uint8_t beforeGet = true;
+    
     for(uint16_t i=0;i<timeout;){
         if(Serial1.available()){
-            request[requestIndex] = (char)Serial1.read(); 
-            if(request[requestIndex++] == '\n'){
-                if( requestIndex > 4 && request[0]=='G' && request[1]=='E' && request[2]=='T' && request[3]==' ' ){
-                    phaseGetRequest(request,len);
-                    return true;
-                }
+            request[requestIndex++] = (char)Serial1.read(); 
+            //find GET request
+            if( beforeGet && requestIndex > 3 && request[0]=='G' && request[1]=='E' && request[2]=='T' && request[3]==' ' ){
+                beforeGet = false;
                 requestIndex = 0;
-            }  
+            }else if(!beforeGet && request[requestIndex-1] == ' ' ){
+                request[requestIndex-1] = 0;
+                return true;
+            }
+         
             if(requestIndex == len)
                 return false;              
         }else{
@@ -270,25 +285,16 @@ bool wifiDuinoClass::waitHttpRequest(char* request, uint8_t len, uint16_t timeou
     return false;
 }   
 
-/*phase request*/
-void wifiDuinoClass::phaseGetRequest(char* request, uint8_t len){
-    int requestIndex = 0;
-    while(true){
-        request[requestIndex]=request[requestIndex+4];
-        requestIndex++;
-        if(request[requestIndex+4] == ' ' || requestIndex == len-4 )
-            break;
-    }
-    request[requestIndex] = 0;    
-}
-
-void wifiDuinoClass::sendHttpPage(PGM_P webPage){
+void wifiDuinoClass::sendHttpPage(PGM_P webPage, PGM_P customFields){
     char bufferSRAM;
     Serial1.println("HTTP/1.1 200 OK");
     Serial1.println("Content-Type: text/html");
     Serial1.print("Content-Length: ");
     Serial1.println(strlen_P(webPage));
-    Serial1.println("");
+    if(customFields)
+    while ((bufferSRAM = pgm_read_byte(customFields++)) != 0)
+            Serial1.print(bufferSRAM);
+    Serial1.println();
     while ((bufferSRAM = pgm_read_byte(webPage++)) != 0)
             Serial1.print(bufferSRAM);
 }
@@ -299,11 +305,79 @@ void wifiDuinoClass::sendHttpMessage(char *message){
     Serial1.println("Content-Type: text/plain");
     Serial1.print("Content-Length: ");
     Serial1.println(strlen(message));
-    Serial1.println("");
+    Serial1.println();
     Serial1.print(message);
 }
 
+void wifiDuinoClass::sendHttpRequest(char *url, char* body, uint8_t method, char* host, char* customFields){
+    char bufferSRAM;
+    switch(method){
+        case HTTP_GET:            
+            Serial1.print("GET ");
+            break;
+        case HTTP_HEAD:
+            Serial1.print("HEAD ");
+            break;
+        case HTTP_POST:
+            Serial1.print("POST ");
+            break;
+        case HTTP_PUT:
+            Serial1.print("PUT ");
+            break;
+        case HTTP_DELETE:
+            Serial1.print("DELETE ");
+            break;
+    }
+    Serial1.print(url);
+    Serial1.println(" HTTP/1.1");
+    Serial1.print("Host: ");
+    if(host)
+        Serial1.print(host);
+    Serial1.println();
+    if(customFields)
+    while ((bufferSRAM = *(customFields++)) != 0)
+            Serial1.print(bufferSRAM);
+    Serial1.println();    
+}
 
+bool wifiDuinoClass::waitHttpRespond(char* respond, uint16_t len, uint16_t timeout){
+    uint8_t respondIndex = 0;
+    uint8_t headerSection = true;
+    for(uint16_t i=0;i<timeout;){
+        if(Serial1.available()){
+            respond[respondIndex++] = (char)Serial1.read();
+            //double CRLF means header section finish
+            if( headerSection &&
+                respondIndex > 3 && 
+                respond[respondIndex-1]=='\n' && 
+                respond[respondIndex-2]=='\r' && 
+                respond[respondIndex-3]=='\n' &&
+                respond[respondIndex-4]=='\r'){
+                //reset index
+                respondIndex = 0;
+                headerSection = false;
+            }
+            if(respondIndex == len)
+                return false;              
+        }else{
+            i++;
+            delay(1);
+        }
+    }
+    if( respondIndex>0 ){
+        respond[respondIndex-1]=0;
+        return true;  
+    }else return false;
+}
+
+void wifiDuinoClass::sendRawData(char *data){
+    Serial1.print(data);
+}
+
+bool wifiDuinoClass::waitRawData(char* data, uint16_t len, uint16_t timeout){
+
+}
+    
 void wifiDuinoClass::error(){
     pinMode(LED_PIN,OUTPUT);  
     while(1)  digitalWrite(LED_PIN,HIGH);
@@ -330,6 +404,7 @@ bool wifiDuinoClass::waitACK(char* ACK, uint8_t timeout){
             delay(1);
         }
     }
+    if(ACKFlag)
     Serial.println(ACK);
     return ACKFlag;
 }  

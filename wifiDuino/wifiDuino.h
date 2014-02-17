@@ -6,8 +6,7 @@
   VER1.1, 25 DEC 2013.
   Released under GPLv2.
 */
-#include "Arduino.h"
-
+#include <Arduino.h>
 #ifndef wifiBoard_h
 #define wifiBoard_h
 
@@ -17,6 +16,12 @@
 
 #define DHCP_ENABLE '1'
 #define DHCP_DISABLE '0'
+
+#define HTTP_GET  1
+#define HTTP_HEAD 2
+#define HTTP_POST 3
+#define HTTP_PUT  4
+#define HTTP_DELETE 5
 
 #define EXIT_SERIAL_PIN 12
 #define LED_PIN 13
@@ -28,8 +33,6 @@ class wifiDuinoClass
     static void error();
     //Wait for an AT command ACK in a timeout.
     static bool waitACK(char* ACK, uint8_t timeout);
-    //Phase http request and output the request URL.
-    static void phaseGetRequest(char* request, uint8_t len);
     //Flag recording if configurations need commit.
     static bool commitFlag;
 
@@ -81,18 +84,29 @@ class wifiDuinoClass
     
     //Server functions:
     //Waiting for HTTP request
-    static bool waitHttpRequest(char* request, uint8_t len, uint16_t timeout); 
+    static bool waitHttpRequest(char* url, uint8_t url_len, uint16_t timeout); 
+
     //Send respond page in flash
-    static void sendHttpPage(PGM_P webpage); 
+    static void sendHttpPage(PGM_P webpage, PGM_P customFields = NULL); 
+        
     //Send short respond message in SRAM
     static void sendHttpMessage(char *message); 
     
     //Client functions:
     //Send HTTP request
-    static void sendHttpRequest(char *url);
+    static void sendHttpRequest(char *url, char* host = NULL, uint8_t method = HTTP_GET, char* body = NULL, char* customFields = NULL);
+    
     //Waiting HTTP respond
-    static void waitHttpRespond(char* respond);
- 
+    static bool waitHttpRespond(char* respond, uint16_t len, uint16_t timeout);
+    
+    //TCP functions 
+    //Send TCP raw date
+    static void sendRawData(char *data);
+    //Send TCP raw date
+    static void sendRawDataPGM(PGM_P data);
+    //Waiting TCP raw date
+    static bool waitRawData(char* data, uint16_t len, uint16_t timeout);
+
 };
 
 static wifiDuinoClass wifiDuino;
