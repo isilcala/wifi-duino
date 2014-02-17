@@ -219,10 +219,6 @@ void wifiDuinoClass::writeConfig(){
 
 void wifiDuinoClass::startServer(char *port){
     char ACK[24]="";
-    delay(450);
-    digitalWrite(EXIT_SERIAL_PIN,HIGH);
-    delay(150);
-    digitalWrite(EXIT_SERIAL_PIN,LOW); 
     
     Serial1.print("at+remoteport=");
     Serial1.println(port);
@@ -240,10 +236,7 @@ void wifiDuinoClass::startServer(char *port){
 
 void wifiDuinoClass::startClient(char *remoteDomain, char *remotePort){
     char ACK[24];
-    delay(450);
-    digitalWrite(EXIT_SERIAL_PIN,HIGH);
-    delay(150);
-    digitalWrite(EXIT_SERIAL_PIN,LOW); 
+
     //Setting remote target configuration
     Serial1.print("at+remoteip=");
     Serial1.println(remoteDomain);
@@ -309,7 +302,7 @@ void wifiDuinoClass::sendHttpMessage(char *message){
     Serial1.print(message);
 }
 
-void wifiDuinoClass::sendHttpRequest(char *url, char* body, uint8_t method, char* host, char* customFields){
+void wifiDuinoClass::sendHttpRequest(char *url, char* host, uint8_t method = HTTP_GET, char* body = NULL, char* customFields = NULL){
     char bufferSRAM;
     switch(method){
         case HTTP_GET:            
@@ -337,7 +330,12 @@ void wifiDuinoClass::sendHttpRequest(char *url, char* body, uint8_t method, char
     if(customFields)
     while ((bufferSRAM = *(customFields++)) != 0)
             Serial1.print(bufferSRAM);
-    Serial1.println();    
+    Serial1.println();
+
+    if(body)
+    while ((bufferSRAM = *(body++)) != 0)
+            Serial1.print(bufferSRAM);
+    Serial1.println();
 }
 
 bool wifiDuinoClass::waitHttpRespond(char* respond, uint16_t len, uint16_t timeout){
@@ -375,14 +373,32 @@ void wifiDuinoClass::sendRawData(char *data){
 }
 
 bool wifiDuinoClass::waitRawData(char* data, uint16_t len, uint16_t timeout){
+    uint8_t respondIndex = 0;
 
+    for(uint16_t i=0;i<timeout;){
+        if(Serial1.available()){
+            respond[respondIndex++] = (char)Serial1.read();
+            if(respondIndex == len)
+                return false;              
+        }else{
+            i++;
+            delay(1);
+        }
+    }
+    if( respondIndex>0 ){
+        respond[respondIndex-1]=0;
+        return true;  
+    }else return false;
 }
     
 void wifiDuinoClass::error(){
     pinMode(LED_PIN,OUTPUT);  
     while(1)  digitalWrite(LED_PIN,HIGH);
 }
-/*Wait for command ACK*/
+/*
+Wait for command ACK
+DO NOT USE ARDUINO STREAM CLASS AS THE STRING IMPLEMENT IS BUGGY AND WASTE RAM
+*/
 bool wifiDuinoClass::waitACK(char* ACK, uint8_t timeout){
     bool ACKFlag = false;
     uint8_t ACKIndex = 0;
