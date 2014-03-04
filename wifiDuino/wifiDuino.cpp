@@ -1,9 +1,9 @@
 /*
   wifiDuino.h - Library for Wifi-Duino.
   Wifi-Duino is a custmized arduino-compatible prototyping platform, providing wifi conectivity.
-  please visiting XXXXXXXXXXXXXXXXXXXXXXXX
+  please visiting http://www.winterland.me/wifi-duino/
   Created by Winterland.
-  VER1.1, 25 DEC 2013.
+  VER1.2, 4th Mar. 2013.
   Released under GPLv2.
 */
 #include "wifiDuino.h"
@@ -36,7 +36,7 @@ void wifiDuinoClass::begin(){
     digitalWrite(EXIT_SERIAL_PIN,LOW); 
     delay(100);
     Serial1.println("at+ver=?");
-    if ( !waitACK(ACK,100) ) error();
+    while( !waitACK(ACK,100) );
     
 }
 
@@ -45,14 +45,14 @@ void wifiDuinoClass::setMode(char mode){
     char netModeCommand[] = "at+netmode=";
     Serial1.print(netModeCommand);
     Serial1.println("?");
-    if ( waitACK(ACK,100)){
+    if( waitACK(ACK,100)){
         if (ACK[0] != mode ){
             commitFlag = true;
             Serial1.print(netModeCommand);
             Serial1.println(mode);
-            if( !waitACK(ACK,100) ) error();
+            while( !waitACK(ACK,100) );
         }
-    }else  error();
+    }
 }
 
 void wifiDuinoClass::setWiFiConfig(char* SSID, char* encrypt, char* password){
@@ -77,9 +77,9 @@ void wifiDuinoClass::setWiFiConfig(char* SSID, char* encrypt, char* password){
             commitFlag = true;
             Serial1.print(wifiConfigCommand);
             Serial1.println(WiFiConfig);
-            if( !waitACK(ACK,100) ) error();
+            while( !waitACK(ACK,100) );
         }
-    }else  error();    
+    }    
 }
 
 void wifiDuinoClass::setDHCP(char dhcp){
@@ -92,9 +92,9 @@ void wifiDuinoClass::setDHCP(char dhcp){
             commitFlag = true;
             Serial1.print(dhcpCommand);
             Serial1.println(dhcp);
-            if( !waitACK(ACK,100) ) error();
+            while( !waitACK(ACK,100) );
         }
-    }else  error();
+    }
 }
 
 void wifiDuinoClass::setIpConfig(char* ip, char* mask, char* gateway){
@@ -119,9 +119,9 @@ void wifiDuinoClass::setIpConfig(char* ip, char* mask, char* gateway){
             commitFlag = true;
             Serial1.print(ipConfigCommand);
             Serial1.println(ipConfig);
-            if( !waitACK(ACK,100) ) error();
+            while( !waitACK(ACK,100) );
         }
-    }else  error();     
+    }     
 }
 
 void wifiDuinoClass::setDnsConfig(char* dns1, char* dns2){
@@ -142,9 +142,9 @@ void wifiDuinoClass::setDnsConfig(char* dns1, char* dns2){
             commitFlag = true;
             Serial1.print(dnsConfigCommand);
             Serial1.println(dnsConfig);
-            if( !waitACK(ACK,100) ) error();
+            while( !waitACK(ACK,100) );
         }
-    }else  error();     
+    }    
 }
 
 void wifiDuinoClass::writeConfig(){
@@ -158,7 +158,7 @@ void wifiDuinoClass::writeConfig(){
 
     Serial1.print("at+netmode=");
     Serial1.println("?");
-    if ( !waitACK(ACK,100))  error();
+    while ( !waitACK(ACK,100));
 
     if(ACK[0] == WIFI_MODE_AP){
     
@@ -169,9 +169,9 @@ void wifiDuinoClass::writeConfig(){
                 commitFlag = true;
                 Serial1.print(dhcpdCommand);
                 Serial1.println(dhcpdConfig);
-                if( !waitACK(ACK,100) ) error();
+                while( !waitACK(ACK,100) );
             }
-        }else  error();
+        }
         
         Serial1.print(dhcpdIpCommand);
         Serial1.println("?");
@@ -180,9 +180,9 @@ void wifiDuinoClass::writeConfig(){
                 commitFlag = true;
                 Serial1.print(dhcpdIpCommand);
                 Serial1.println(dhcpdIpConfig);
-                if( !waitACK(ACK,100) ) error();
+                while( !waitACK(ACK,100) );
             }
-        }else  error();
+        }
 
         Serial1.print(dhcpdDnsCommand);
         Serial1.println("?");
@@ -191,9 +191,9 @@ void wifiDuinoClass::writeConfig(){
                 commitFlag = true;
                 Serial1.print(dhcpdDnsCommand);
                 Serial1.println(dhcpdDnsConfig);
-                if( !waitACK(ACK,100) ) error();
+                while( !waitACK(ACK,100) );
             }
-        }else  error();
+        }
         
         setIpConfig("192.168.1.254","255.255.255.0","192.168.1.1");
         setDnsConfig("192.168.1.254","8.8.8.8");
@@ -208,48 +208,50 @@ void wifiDuinoClass::writeConfig(){
                 commitFlag = false;
                 break;          
             }    
-            if( i==99 )  error();
         }        
                 
         delay(30000);
         Serial1.println("at+ver=?");
-        if ( !waitACK(ACK,255) ) error();
+        while( !waitACK(ACK,255) );
     } 
 }
 
 void wifiDuinoClass::startServer(char *port){
     char ACK[24]="";
-    
+    //Setting remote target configuration  
     Serial1.print("at+remoteport=");
     Serial1.println(port);
-    if( !waitACK(ACK,100) ) error(); 
+    while( !waitACK(ACK,100) ); 
     Serial1.println("at+remotepro=tcp");
-    if( !waitACK(ACK,100) ) error(); 
+    while( !waitACK(ACK,100) ); 
     Serial1.println("at+timeout=0");
-    if( !waitACK(ACK,100) ) error();   
+    while( !waitACK(ACK,100) );   
     Serial1.println("at+mode=server");
-    if( !waitACK(ACK,100) ) error();   
+    while( !waitACK(ACK,100) );   
     //commit configuration and reconnect
     Serial1.println("at+save=1");
-    if( !waitACK(ACK,255) ) error();
+    while( !waitACK(ACK,100) );
+    Serial1.println("at+reconn=1");
 }
 
 void wifiDuinoClass::startClient(char *remoteDomain, char *remotePort){
     char ACK[24];
-
     //Setting remote target configuration
     Serial1.print("at+remoteip=");
     Serial1.println(remoteDomain);
+    while( !waitACK(ACK,100) ); 
     Serial1.print("at+remoteport=");
     Serial1.println(remotePort);
-
+    while( !waitACK(ACK,100) ); 
     //Setting adapter client configuration
     Serial1.println("at+remotepro=tcp");
+    while( !waitACK(ACK,100) ); 
     Serial1.println("at+mode=client");
-    
+    while( !waitACK(ACK,100) ); 
     //commit configuration and reconnect
     Serial1.println("at+save=1");
-    if( !waitACK(ACK,100) ) error();
+    while( !waitACK(ACK,100) );
+    Serial1.println("at+reconn=1");
 }
 //wait for request
 bool wifiDuinoClass::waitHttpRequest(char* request, uint8_t len, uint16_t timeout){ 
@@ -302,8 +304,7 @@ void wifiDuinoClass::sendHttpMessage(char *message){
     Serial1.print(message);
 }
 
-void wifiDuinoClass::sendHttpRequest(char *url, char* host, uint8_t method = HTTP_GET, char* body = NULL, char* customFields = NULL){
-    char bufferSRAM;
+void wifiDuinoClass::sendHttpRequest(char *url, char* host, uint8_t method, bool customized){
     switch(method){
         case HTTP_GET:            
             Serial1.print("GET ");
@@ -325,19 +326,12 @@ void wifiDuinoClass::sendHttpRequest(char *url, char* host, uint8_t method = HTT
     Serial1.println(" HTTP/1.1");
     Serial1.print("Host: ");
     if(host)
-        Serial1.print(host);
-    Serial1.println();
-    if(customFields)
-    while ((bufferSRAM = *(customFields++)) != 0)
-            Serial1.print(bufferSRAM);
-    Serial1.println();
+        Serial1.println(host);
+    else Serial1.println();
 
-    if(body)
-    while ((bufferSRAM = *(body++)) != 0)
-            Serial1.print(bufferSRAM);
-    Serial1.println();
+    if(!customized)
+        Serial1.println();
 }
-
 bool wifiDuinoClass::waitHttpRespond(char* respond, uint16_t len, uint16_t timeout){
     uint8_t respondIndex = 0;
     uint8_t headerSection = true;
@@ -377,7 +371,7 @@ bool wifiDuinoClass::waitRawData(char* data, uint16_t len, uint16_t timeout){
 
     for(uint16_t i=0;i<timeout;){
         if(Serial1.available()){
-            respond[respondIndex++] = (char)Serial1.read();
+            data[respondIndex++] = (char)Serial1.read();
             if(respondIndex == len)
                 return false;              
         }else{
@@ -386,15 +380,11 @@ bool wifiDuinoClass::waitRawData(char* data, uint16_t len, uint16_t timeout){
         }
     }
     if( respondIndex>0 ){
-        respond[respondIndex-1]=0;
+        data[respondIndex-1]=0;
         return true;  
     }else return false;
 }
-    
-void wifiDuinoClass::error(){
-    pinMode(LED_PIN,OUTPUT);  
-    while(1)  digitalWrite(LED_PIN,HIGH);
-}
+
 /*
 Wait for command ACK
 DO NOT USE ARDUINO STREAM CLASS AS THE STRING IMPLEMENT IS BUGGY AND WASTE RAM

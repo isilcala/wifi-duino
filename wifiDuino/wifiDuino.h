@@ -1,9 +1,9 @@
 /*
   wifiDuino.h - Library for Wifi-Duino.
   Wifi-Duino is a custmized arduino-compatible prototyping platform, providing wifi conectivity.
-  please visiting XXXXXXXXXXXXXXXXXXXXXXXX
+  please visiting http://www.winterland.me/wifi-duino/
   Created by Winterland.
-  VER1.1, 25 DEC 2013.
+  VER1.2, 4th Mar. 2013.
   Released under GPLv2.
 */
 #include <Arduino.h>
@@ -29,8 +29,6 @@
 class wifiDuinoClass
 {
   private:   
-    //Turn LED on to notify there is an error 
-    static void error();
     //Wait for an AT command ACK in a timeout.
     static bool waitACK(char* ACK, uint8_t timeout);
     //Flag recording if configurations need commit.
@@ -94,7 +92,7 @@ class wifiDuinoClass
     
     //Client functions:
     //Send HTTP request
-    static void sendHttpRequest(char *url, char* host = NULL, uint8_t method = HTTP_GET, char* body = NULL, char* customFields = NULL);
+    static void sendHttpRequest(char *url, char* host, uint8_t method = HTTP_GET, bool customized = false);
     
     //Waiting HTTP respond
     static bool waitHttpRespond(char* respond, uint16_t len, uint16_t timeout);
